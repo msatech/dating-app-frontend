@@ -1,6 +1,20 @@
-import type { NextAuthOptions } from "next-auth";
+import type {
+  NextAuthOptions,
+  User as NextAuthUser,
+  Account,
+  Profile,
+  Session,
+} from "next-auth";
+import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import axios from "./axios";
+
+interface User {
+  id: string;
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+}
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -15,31 +29,55 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(
         credentials: Record<"email" | "otp", string> | undefined
-      ) {
+      ): Promise<User | null> {
         if (!credentials) {
           return null;
         }
         const { email, otp } = credentials;
 
-        let payload = { email, otp };
         try {
-          const response = await axios.post("/auth/verify-otp/", payload);
-          if(response.status === 200){
-            if(response.data && response.data.userId){
-              let userID = response.data.userId
-              let { data } = await axios.get(`/users/profile/${userID}`);
-              console.log(data, "user Data")
-              return data
-            }
-          }else{
-            return 'Invalid Credentails'
+          const response = await axios.post("/auth/verify-otp/", {
+            email,
+            otp,
+          });
+          if (
+            response.status === 200 &&
+            response.data &&
+            response.data.userId
+          ) {
+            const { userId, accessToken, refreshToken } = response.data;
+            const user: User = {
+              id: userId,
+              email,
+              accessToken,
+              refreshToken,
+            };
+            return user;
           }
-
         } catch (error) {
           console.error("API error:", error);
-          return null; // Handle error case appropriately
         }
+
+        return null;
       },
     }),
   ],
+  callbacks: {
+    async jwt({
+      token,
+      user,
+    }: {
+      token: JWT;
+      user: NextAuthUser | Account | null;
+    }) {
+      if (user) {
+        token.user = user;
+      }
+      return token;
+    },
+    async session({ session, token }: { session: Session; token: any }) {
+      session.user = token.user;
+      return session;
+    },
+  },
 };

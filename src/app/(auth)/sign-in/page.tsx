@@ -8,39 +8,64 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "@/lib/axios";
 import OtpScreen from "@/components/OtpScreen";
+import { useToast } from "@/components/ui/use-toast"
 
 const page = () => {
+  const { toast } = useToast()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showOTP, setShowOTP] = useState(false);
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsLoading(true)
+    setIsLoading(true);
     let payload = { email, password };
-    let response = await await axios.post("/auth/login/", payload);
-    if (response.status === 200) {
-      setShowOTP(true)
+
+    try {
+      let response = await axios.post("/auth/login/", payload);
+
+      if (response.status === 200) {
+        const { message} = response.data
+        toast({
+          title: message || 'OTP sent to your email',
+        })
+        setShowOTP(true);
+      } else {
+        setShowOTP(false);
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: 'Invalid login credentials',
+      })
     }
-    setIsLoading(false)
+
+    setIsLoading(false);
   };
 
   const handleOtpSubmit = async (otp: string) => {
-    if(email && password && otp){
+    if (email && password && otp) {
       const result = await signIn("credentials", {
         email,
         otp,
         callbackUrl: `${window.location.origin}/`,
-      })
-      console.log(result, "result")
-    }else{
-      console.log('error')
+        redirect: false,
+      });
+      if (result?.error) {
+        // Handle login error
+        console.log("Login error:", result.error);
+      } else if (result?.url) {
+        // Redirect to the URL after successful login
+        window.location.href = result.url;
+      }
+    } else {
+      console.log("error");
     }
   };
 
   const handleResetOtp = async () => {
-    console.log('reset')
+    console.log("reset");
   };
 
   return (
@@ -48,7 +73,11 @@ const page = () => {
       <h1 className="font-bold text-3xl md:text-4xl text-blue-500">Loving-O</h1>
 
       {showOTP ? (
-        <OtpScreen handleOtpSubmit={handleOtpSubmit} handleResetOtp={handleResetOtp} isLoading={isLoading} />
+        <OtpScreen
+          handleOtpSubmit={handleOtpSubmit}
+          handleResetOtp={handleResetOtp}
+          isLoading={isLoading}
+        />
       ) : (
         <>
           <h2 className="text-xl md:text-2xl text-gray-800 font-bold mt-4 dark:text-gray-100">
@@ -70,7 +99,7 @@ const page = () => {
                 type="password"
                 placeholder="Password"
               />
-              <Button disabled={isLoading} variant="default" type="submit">
+              <Button isLoading={isLoading} variant="default"  type="submit">
                 {" "}
                 Login{" "}
               </Button>

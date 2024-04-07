@@ -27,6 +27,8 @@ interface RootLayoutProps {
   children: React.ReactNode
 }
 
+import { Toaster } from "@/components/ui/toaster"
+
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <>
@@ -41,6 +43,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <ThemeProvider attribute="class" defaultTheme="black" enableSystem>
             {children}
           </ThemeProvider>
+          <Toaster />
         </body>
       </html>
     </>
